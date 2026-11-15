@@ -1,0 +1,13 @@
+case_no,case,sku,eng_part_id,description
+1,HIDDEN_LINK,MTR-X72,ASSEMBLY-204,Description shares nothing with the engineering part; unique demand footprint (P2x1 + P5x2)
+2,HIDDEN_LINK_BACKUP,NTN-6204L,BRG-0201,"Backup supplier bearing with dimension-style description, ~30% share"
+3,DRAWING_NUMBER_ONLY,ITEM-4471B,ELE-0402,Description is only a drawing reference
+4,SIGNATURE_TWINS,SLX-4040G / SLX-4040R,SEL-0301 / SEL-0302,Both 1x only in P3: identical demand signature; name/spec must break the tie
+5,ECO_CHANGE,GR-48-2H,PWR-0702,"BOM 2/unit in P4; physically 3/unit from 2026-03; hidden by backflush, visible in counts"
+6,PERSISTENT_EXCESS,SKF-6204 + NTN-6204L,BRG-0201,"~7% physical over-consumption; backflush hides it, counts reveal it"
+7,OBSOLETE,TB-6W-L,OBS-9901,Still purchased; part in no active BOM
+8,INVENTORY_BUILD,GR-32-15,PWR-0701,"One-off 9,000-unit buy in 2025-10; explained by counted stock; must NOT be flagged"
+9,FALSE_POSITIVE_TRAP,CLT-S20 / GLV-NL100,NONE,Indirect spend (coolant tracks total output; gloves flat); must stay unresolved
+10,BACKFLUSH,most SKUs,-,"Posted consumption = BOM x production exactly (circular) except ENC-1024, PSU-245D, WRX-12M, LZR-P8"
+11,LOW_SHARE_BACKUP,QNC-M6NL,FST-0104,"5% backup supplier: plausible, must not be rejected"
+12,NEAR_DUPLICATES,"FST-0101/FST-0107, STR-0602/STR-0605",-,Track 1 standardization candidates

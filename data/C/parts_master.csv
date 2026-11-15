@@ -1,0 +1,40 @@
+eng_part_id,description,category,spec,std_cost,status
+F-05016,Hex head cap screw M5 x 16 zinc plated,Fastener,M5;16mm;zinc,0.232,active
+F-06030,Hex head cap screw M6 x 30 zinc plated,Fastener,M6;30mm;zinc,0.3,active
+F-08025,Hex head cap screw M8 x 25 zinc plated,Fastener,M8;25mm;zinc,0.37,active
+F-08040,Hex head cap screw M8 x 40 zinc plated,Fastener,M8;40mm;zinc,0.4,active
+F-10035,Hex head cap screw M10 x 35 zinc plated,Fastener,M10;35mm;zinc,0.47,active
+F-12050,Hex head cap screw M12 x 50 zinc plated,Fastener,M12;50mm;zinc,0.58,active
+N-060,Hex nut M6 class 8 zinc,Fastener,M6;nut;class 8,0.12,active
+N-080,Hex nut M8 class 8 zinc,Fastener,M8;nut;class 8,0.16,active
+N-100,Hex nut M10 class 8 zinc,Fastener,M10;nut;class 8,0.2,active
+B-6202,Ball bearing 6202 sealed bore 15mm,Bearing,6202;15mm;sealed,2.7,active
+B-6205,Ball bearing 6205 sealed bore 25mm,Bearing,6205;25mm;sealed,3.5,active
+B-6301,Ball bearing 6301 sealed bore 12mm,Bearing,6301;12mm;sealed,2.46,active
+B-NK2520,Ball bearing NK2520 sealed bore 25mm,Bearing,NK2520;25mm;sealed,3.5,active
+S-OR32,O-ring NBR 32mm x 3.5mm,Seal,NBR;32mm;o-ring,0.308,active
+S-OR48,O-ring NBR 48mm x 3.5mm,Seal,NBR;48mm;o-ring,0.372,active
+S-OR65,O-ring NBR 65mm x 3.5mm,Seal,NBR;65mm;o-ring,0.44,active
+E-4116,Pressure sensor 0-10 bar 4-20mA,Electrical,0-10bar;4-20mA;sensor,34.0,active
+E-4117,Flow switch paddle 1 inch,Electrical,1in;flow switch,27.0,active
+E-4118,Control board main PCB rev D,Electrical,PCB;rev D;controller,61.0,active
+E-4119,Display module 4.3 inch touch,Electrical,4.3in;touch;display,48.0,active
+E-4120,Cable assembly 8 pin sensor,Electrical,8pin;cable,5.6,active
+E-4121,Relay 24VDC 10A DIN,Electrical,24VDC;10A;relay,8.9,obsolete
+M-055,Induction motor 0.55kW IE3 2 pole,Motor,0.55kW;IE3;2pole,92.0,active
+M-110,Induction motor 1.1kW IE3 2 pole,Motor,1.1kW;IE3;2pole,128.0,active
+M-220,Induction motor 2.2kW IE3 2 pole,Motor,2.2kW;IE3;2pole,186.0,active
+G-24M1.5,Spur gear 24 teeth module 1.5,Powertrain,24T;m1.5,5.88,active
+G-36M2,Spur gear 36 teeth module 2,Powertrain,36T;m2,7.32,obsolete
+G-60M2,Spur gear 60 teeth module 2,Powertrain,60T;m2,10.2,active
+P-IMP40,Impeller bronze 40mm closed,Pump,40mm;bronze;impeller,17.0,active
+P-CAS40,Pump casing cast iron DN40,Pump,DN40;cast iron;casing,30.0,active
+P-IMP50,Impeller bronze 50mm closed,Pump,50mm;bronze;impeller,19.0,active
+P-CAS50,Pump casing cast iron DN50,Pump,DN50;cast iron;casing,33.0,active
+P-IMP65,Impeller bronze 65mm closed,Pump,65mm;bronze;impeller,22.0,active
+P-CAS65,Pump casing cast iron DN65,Pump,DN65;cast iron;casing,37.5,active
+P-IMP80,Impeller bronze 80mm closed,Pump,80mm;bronze;impeller,25.0,active
+P-CAS80,Pump casing cast iron DN80,Pump,DN80;cast iron;casing,42.0,active
+X-7337,Base frame welded steel,Structure,steel;frame;welded,38.0,active
+X-7338,Terminal box cover polyamide,Structure,PA;cover,3.3,active
+X-7340,Shaft sleeve 25mm stainless,Seal,25mm;stainless;sleeve,7.4,active

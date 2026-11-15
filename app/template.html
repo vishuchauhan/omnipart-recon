@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OmniPart RECON</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: engineering-drawing workbench. Fixed left nav of 13 views, a summary-first main canvas,
+   part numbers in mono, one cobalt accent, status carried by chips and severity stripes. */
+:root{
+  --bg:#f4f6f9; --surface:#ffffff; --ink:#18202c; --muted:#5b6678; --line:#dde2ea; --accent:#2350d8;
+  --accent-soft:#e6ecfd; --ok:#1f8a56; --ok-soft:#e3f4ea; --warn:#b26a00; --warn-soft:#fdf1dc;
+  --bad:#c23a32; --bad-soft:#fbe6e4; --idle:#6f7a8c; --idle-soft:#eceff4;
+  --display:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f141c; --surface:#171e29; --ink:#e7ecf3; --muted:#9aa6b8; --line:#2a3443; --accent:#7f9dff;
+  --accent-soft:#1f2b4d; --ok:#4cc38a; --ok-soft:#173327; --warn:#f0b54d; --warn-soft:#3a2c12;
+  --bad:#ff7b72; --bad-soft:#3d1d1c; --idle:#8d98aa; --idle-soft:#232c3a; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f141c; --surface:#171e29; --ink:#e7ecf3; --muted:#9aa6b8; --line:#2a3443; --accent:#7f9dff;
+  --accent-soft:#1f2b4d; --ok:#4cc38a; --ok-soft:#173327; --warn:#f0b54d; --warn-soft:#3a2c12;
+  --bad:#ff7b72; --bad-soft:#3d1d1c; --idle:#8d98aa; --idle-soft:#232c3a; color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body)}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100%}
+nav{background:var(--surface);border-right:1px solid var(--line);padding:18px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{font:700 17px/1.2 var(--display);letter-spacing:-.01em;padding:0 8px 2px}
+.brand small{display:block;font:500 11px var(--mono);color:var(--muted);letter-spacing:.04em;margin-top:4px}
+.navgroup{margin-top:16px}
+.navgroup h6{margin:0 8px 6px;font:600 10.5px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+nav a{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:13.5px}
+nav a:hover{background:var(--idle-soft)}
+nav a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+nav a .n{font:500 10.5px var(--mono);color:var(--muted);width:18px}
+.badge-syn{margin:16px 8px 0;font:500 11px var(--body);color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:6px 8px}
+main{padding:24px 28px 60px;min-width:0}
+h1{font:700 24px/1.2 var(--display);margin:0 0 4px;letter-spacing:-.015em;text-wrap:balance}
+h2{font:600 16px/1.3 var(--display);margin:0 0 10px;text-wrap:balance}
+h3{font:600 13.5px/1.3 var(--display);margin:0 0 6px}
+.lede{color:var(--muted);max-width:72ch;margin:0 0 18px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.kpi .lab{font-size:12px;color:var(--muted)}
+.kpi .val{font:600 22px/1.2 var(--display);font-variant-numeric:tabular-nums;margin-top:4px}
+.kpi .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.mono{font-family:var(--mono);font-size:12.5px}
+.muted{color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font:500 11.5px var(--body);white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.c-ok{background:var(--ok-soft);color:var(--ok)}.c-warn{background:var(--warn-soft);color:var(--warn)}
+.c-bad{background:var(--bad-soft);color:var(--bad)}.c-idle{background:var(--idle-soft);color:var(--idle)}.c-acc{background:var(--accent-soft);color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11.5px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+td.r,th.r{text-align:right}
+td.mono,.mono{white-space:nowrap}
+tbody tr.click{cursor:pointer}tbody tr.click:hover{background:var(--idle-soft)}
+.scroll{overflow-x:auto}
+button,.btn{font:500 13px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.good{background:var(--ok);border-color:var(--ok);color:#fff}
+button.danger{color:var(--bad)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{font:13px var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.stripe{border-left:3px solid var(--line);padding-left:10px}
+.stripe.bad{border-color:var(--bad)}.stripe.warn{border-color:var(--warn)}.stripe.ok{border-color:var(--ok)}.stripe.acc{border-color:var(--accent)}
+.record{border:1px dashed var(--line);border-radius:10px;padding:14px;background:var(--bg)}
+.record .sys{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.record .pn{font:600 18px var(--mono);margin:6px 0 2px}
+.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center}
+.vs .q{font:700 22px var(--display);color:var(--muted)}
+.meter{height:8px;border-radius:99px;background:var(--idle-soft);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
+.steps{counter-reset:s;display:grid;gap:14px}
+.step{position:relative;padding-left:40px}
+.step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:600 13px/28px var(--display);text-align:center}
+svg text{fill:var(--muted);font:11px var(--body)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.drawer{position:fixed;top:0;right:0;width:min(560px,100%);height:100%;background:var(--surface);border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(0,0,0,.12);padding:20px;overflow:auto;z-index:20;display:none}
+.drawer.open{display:block}
+.board{display:grid;grid-template-columns:repeat(6,minmax(210px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--idle-soft);border-radius:10px;padding:8px;min-height:240px}
+.col h4{margin:2px 4px 8px;font:600 12px var(--body);display:flex;justify-content:space-between}
+.col.over{outline:2px dashed var(--accent)}
+.kcard{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:8px;cursor:grab}
+.kcard .t{font:600 12.5px var(--body)}
+.kcard .m{font-size:11.5px;color:var(--muted);margin-top:4px}
+pre.msg{white-space:pre-wrap;font:12.5px/1.55 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px;margin:0;max-height:420px;overflow:auto}
+.eco{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.eco .layer{border-radius:10px;padding:12px;border:1px solid var(--line)}
+.eco .wf{grid-column:1/-1;background:var(--accent-soft);border-color:transparent}
+.formula{font:13px/1.6 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:pre}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:8px;font-size:13px;display:none;z-index:30}
+.heat td{text-align:center;font:500 11px var(--mono);padding:5px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button.on{background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:600}
+@media (max-width:980px){.app{grid-template-columns:1fr}nav{position:static;height:auto}.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr}.vs{grid-template-columns:1fr}.vs .q{display:none}main{padding:18px 16px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ---------- presentation ---------- */
+.deck{position:relative;background:#0b0f16;border-radius:12px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,.18)}
+.deck img{display:block;width:100%;height:auto;aspect-ratio:1376/768;object-fit:contain;cursor:pointer;user-select:none}
+.deck .hit{position:absolute;top:0;bottom:0;width:22%;cursor:pointer}
+.deck .hit.l{left:0}.deck .hit.r{right:0}
+.deckbar{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.deckbar .count{font:600 14px var(--mono, monospace);color:var(--muted);min-width:64px;text-align:center}
+.thumbs{display:flex;gap:8px;margin-top:12px;overflow-x:auto;padding-bottom:4px}
+.thumbs img{width:120px;border-radius:6px;border:2px solid transparent;cursor:pointer;opacity:.7}
+.thumbs img.on{border-color:var(--accent);opacity:1}
+.deck:fullscreen{display:flex;align-items:center;justify-content:center;border-radius:0;background:#000}
+.deck:fullscreen img{width:100vw;height:100vh;aspect-ratio:auto}
+.deck:-webkit-full-screen{display:flex;align-items:center;justify-content:center;background:#000}
+.deck:-webkit-full-screen img{width:100vw;height:100vh}
+</style>
+</head>
+<body>
+<div class="app">
+<nav aria-label="Views">
+  <div class="brand">OmniPart RECON<small>BOM-TO-SPEND EVIDENCE LAYER</small></div>
+  <div id="navlinks"></div>
+  <div class="badge-syn" id="srcbadge">Synthetic demo data: fictional company, planted cases, answer key used only on the Proof view.</div>
+</nav>
+<main id="view" tabindex="-1"></main>
+</div>
+<aside class="drawer" id="drawer" aria-label="Evidence passport"></aside>
+<div class="toast" id="toast" role="status"></div>
+<script id="bundle" type="application/json">__BUNDLE__</script>
+<script id="slides" type="application/json">__SLIDES__</script>
+<script>
+const D = JSON.parse(document.getElementById('bundle').textContent);
+let API = false;   /* true when served by the local FastAPI server */
+if (['localhost','127.0.0.1'].includes(location.hostname)) fetch('/api/health').then(r => r.json()).then(h => { API = true; API_INFO = h; render(); }).catch(() => {});
+let API_INFO = {};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const K = v => Math.abs(v) >= 1e6 ? '$' + (v/1e6).toFixed(2) + 'M' : Math.abs(v) >= 1000 ? '$' + (v/1000).toFixed(1) + 'K' : '$' + Math.round(v).toLocaleString();
+const R = r => `${K(r.p10)}–${K(r.p90)}`;
+const pct = v => (v*100).toFixed(1) + '%';
+const num = v => Math.round(v).toLocaleString();
+const partDesc = Object.fromEntries(D.parts.map(p => [p.eng_part_id, p.description]));
+const LINK = Object.fromEntries(D.links.map(l => [l.sku, l]));
+
+/* ---------- state: link decisions and card states (kept in this browser only) ---------- */
+let S = {link:{}, card:{}};
+try { S = JSON.parse(localStorage.getItem('recon-state')) || S; } catch(e) {}
+const save = () => { try { localStorage.setItem('recon-state', JSON.stringify(S)); } catch(e) {} };
+const linkState = l => S.link[l.sku] || l.state;
+const cardState = c => S.card[c.id] || c.state;
+function setLink(sku, st){
+  S.link[sku] = st;
+  D.cards.filter(c => c.type === 'VERIFY_LINK' && c.sku === sku).forEach(c => S.card[c.id] = st === 'Verified' ? 'Verified' : st === 'Rejected' ? 'Rejected' : 'Proposed');
+  save(); toast(`${sku}: ${st.toLowerCase()}`); render();
+}
+function toast(t){ const el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => el.style.display = 'none', 1800); }
+
+/* ---------- live money: part prices and product cost from active links ---------- */
+function activeLinks(){ const m = {}; D.links.forEach(l => { if (l.part && linkState(l) !== 'Rejected') m[l.sku] = l.part; }); return m; }
+function nameOnlyLinks(){ const m = {}; D.links.forEach(l => { if (l.name_only_part) m[l.sku] = l.name_only_part; }); return m; }
+function partPrices(links){ const v = {}, q = {}; for (const [s, j] of Object.entries(links)) { v[j] = (v[j]||0) + D.qty12[s]*LINK[s].price; q[j] = (q[j]||0) + D.qty12[s]; } const out = {}; for (const j in v) if (q[j] > 0) out[j] = v[j]/q[j]; return out; }
+function productCosts(){
+  const pb = partPrices(nameOnlyLinks()), pa = partPrices(activeLinks());
+  return D.products.map(p => { const lines = D.bom.filter(b => b.product_id === p.product_id);
+    const cb = lines.reduce((s, b) => s + b.qty_per_unit*(pb[b.eng_part_id]||0), 0);
+    const ca = lines.reduce((s, b) => s + b.qty_per_unit*(pa[b.eng_part_id]||0), 0);
+    return {...p, lines, cb, ca, units: D.units12[p.product_id], unpriced: lines.filter(b => !(b.eng_part_id in pa)).map(b => b.eng_part_id)}; });
+}
+function liveAttributed(){ return productCosts().reduce((s, p) => s + (p.ca - p.cb)*p.units, 0); }
+function coverage(){ const tot = D.kpis.total_spend_12m; const lk = D.links.filter(l => l.part && linkState(l) !== 'Rejected').reduce((s, l) => s + l.spend12, 0); return tot > 0 ? lk/tot : D.links.filter(l => l.part && linkState(l) !== 'Rejected').length / Math.max(1, D.links.length); }
+
+/* ---------- charts (SVG, one scale, labelled from theme tokens) ---------- */
+const nice = v => { const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v/p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10)*p; };
+const win3 = a => a.slice(2).map((_, i) => a[i] + a[i+1] + a[i+2]);
+function lineChart(series, labels, {h=260, w=900, yfmt=num, title=''}={}){
+  const W = w, H = h, L = 58, Rr = 36, T = 12, B = 30;
+  const all = series.flatMap(s => s.data.filter(v => v != null && isFinite(v)));
+  if (!all.length || labels.length < 2) return '<div class="muted" style="padding:20px 0">Not enough monthly history to draw this chart.</div>';
+  let lo = Math.min(0, ...all), hi = Math.max(...all); if (hi === lo) hi = lo + 1; hi = nice(hi*1.05);
+  const x = i => L + i*(W-L-Rr)/Math.max(1, labels.length-1), y = v => T + (H-T-B)*(1 - (v-lo)/(hi-lo));
+  const ticks = 4, g = [];
+  for (let k = 0; k <= ticks; k++){ const v = lo + (hi-lo)*k/ticks; g.push(`<line x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${yfmt(v)}</text>`); }
+  const step = Math.ceil(labels.length/8);
+  labels.forEach((l, i) => { if (i % step === 0) g.push(`<text x="${x(i)}" y="${H-10}" text-anchor="middle">${esc(l)}</text>`); });
+  const paths = series.map(s => { const pts = s.data.map((v, i) => v == null ? null : `${x(i)},${y(v)}`).filter(Boolean);
+    return `<polyline fill="none" stroke="${s.color}" stroke-width="${s.w||2}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ''} points="${pts.join(' ')}"/>` +
+      (s.dots ? s.data.map((v, i) => v == null ? '' : `<circle cx="${x(i)}" cy="${y(v)}" r="2.6" fill="${s.color}"/>`).join('') : ''); });
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(title)}">${g.join('')}${paths.join('')}</svg>` +
+    `<div class="legend">${series.map(s => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`;
+}
+function rangeBars(items, {fmt=K}={}){
+  const max = Math.max(...items.map(i => i.p90 || i.value || 0), 1);
+  return `<div class="grid" style="gap:12px">${items.map(i => `<div><div class="spread"><span>${esc(i.label)}</span><span class="mono">${i.p10 != null ? fmt(i.p10)+'–'+fmt(i.p90) : fmt(i.value)}</span></div>
+    <div style="position:relative;height:12px;background:var(--idle-soft);border-radius:6px;margin-top:5px">
+      ${i.p10 != null ? `<div style="position:absolute;left:${i.p10/max*100}%;width:${Math.max((i.p90-i.p10)/max*100, .6)}%;top:0;bottom:0;background:${i.color||'var(--bad)'};opacity:.35;border-radius:6px"></div>
+      <div style="position:absolute;left:${i.p50/max*100}%;top:-2px;bottom:-2px;width:3px;background:${i.color||'var(--bad)'};border-radius:2px"></div>` :
+      `<div style="width:${i.value/max*100}%;height:100%;background:${i.color||'var(--idle)'};border-radius:6px"></div>`}
+    </div></div>`).join('')}</div>`;
+}
+
+/* ---------- money ladder: indicative -> qualified -> approved -> realized ---------- */
+const LADDER = [['Indicative','Proposed or assigned: model output, not yet reviewed'],['Qualified','In review by the owner'],['Approved','Signed off by the owner'],['Realized','Measured after the action is executed']];
+function ladder(){
+  const sum = st => D.cards.filter(c => !(c.type==='STANDARDIZATION' && c.rng.p50 <= 0) && st.includes(cardState(c))).reduce((a, c) => a + Math.max(0, c.rng.p50), 0);
+  const v = [sum(['Proposed','Assigned']), sum(['In review']), sum(['Verified']), null];
+  return `<div class="grid g4" style="gap:8px">${LADDER.map(([n, d], i) => `<div class="stripe ${['warn','acc','ok',''][i]}" style="padding:4px 10px"><div class="lab" style="font-size:12px;color:var(--muted)">${i+1}. ${n}</div><div style="font:600 18px var(--display)">${v[i]==null?'not tracked yet':K(v[i])}</div><div class="muted" style="font-size:11.5px">${d}</div></div>`).join('')}</div>
+  <p class="muted" style="font-size:12px;margin:8px 0 0">P50 of spend involved per item. Move cards on the resolution board to promote dollars up the ladder. Nothing is a saving until it is realized.</p>`;
+}
+const CAPS = D.readiness ? D.readiness.capabilities : {};
+const SIG = D.readiness && D.readiness.behavior_signal;
+function readinessBanner(){
+  const miss = Object.entries({behavior_matching:'behavior matching', reconciliation:'reconciliation', spend_amounts:'spend amounts'}).filter(([k]) => CAPS[k] === false).map(([, v]) => v);
+  const weak = SIG && SIG.verdict === 'weak';
+  if (!miss.length && !weak) return '';
+  return `<div class="card stripe warn" style="margin-bottom:14px"><b>Data readiness:</b> ${miss.length ? 'not available with the files provided: ' + miss.join(', ') + '. ' : ''}${weak ? 'Behavior evidence is weak on this data (self-check ' + SIG.strength.toFixed(2) + '): RECON relies on names and leaves the rest unresolved. ' : ''}<a href="#data">See what each file unlocks</a>.</div>`;
+}
+/* ---------- small helpers ---------- */
+const chipFor = (st, ev) => {
+  st = st || ''; if (st === 'Verified') return '<span class="chip c-ok">Verified</span>';
+  if (st === 'Rejected') return '<span class="chip c-bad">Rejected</span>';
+  if (st === 'Unresolved') return '<span class="chip c-idle">Unresolved</span>';
+  if (ev === 'Hidden link') return '<span class="chip c-acc">Proposed · hidden link</span>';
+  if (ev === 'Look-alike (twin)') return '<span class="chip c-warn">Proposed · look-alike</span>';
+  if (ev === 'Signals disagree') return '<span class="chip c-bad">Proposed · signals disagree</span>';
+  return '<span class="chip c-warn">Proposed</span>';
+};
+const bandTxt = l => l.band_precision ? `${l.band}: ${Math.round(l.band_precision[0]*100)}% correct (95% CI ${Math.round(l.band_precision[1]*100)}–${Math.round(l.band_precision[2]*100)}%, n=${l.band_precision[3]})` : '–';
+const sc = v => v == null ? 'n/a' : v.toFixed(2);
+
+/* ---------- views ---------- */
+const VIEWS = [
+  ['Foundation (Track 3)', [['overview','Overview'],['motor','The mystery motor'],['links','Link map'],['reconcile','Reconciliation'],['integrity','Spend integrity'],['cost','True product cost']]],
+  ['Standardization (Track 1)', [['standard','Standardization']]],
+  ['Workflow', [['board','Resolution board'],['comms','Communications']]],
+  ['Trust', [['proof','Proof'],['data','Data & backflush'],['method','Methodology']]],
+  ['Customer value (Track 2)', [['roadmap','Roadmap']]],
+  ['Pitch', [['present','Presentation']]],
+];
+function navHTML(cur){ let n = 0; return VIEWS.map(([g, items]) => `<div class="navgroup"><h6>${g}</h6>${items.map(([id, lab]) => `<a href="#${id}" class="${id===cur?'on':''}"><span class="n">${String(++n).padStart(2,'0')}</span>${lab}</a>`).join('')}</div>`).join(''); }
+
+const V = {};
+V.overview = () => {
+  const k = D.kpis, live = liveAttributed(), base = D.kpis.attributed.p50, sc_ = base ? live/base : 1;
+  const att = {p10:k.attributed.p10*sc_, p90:k.attributed.p90*sc_};
+  const open = D.cards.filter(c => !['Verified','Rejected'].includes(cardState(c)));
+  const byDept = {}; open.forEach(c => c.owners.forEach(o => byDept[o] = (byDept[o]||0) + 1));
+  const ver = D.links.filter(l => linkState(l) === 'Verified').length, rej = D.links.filter(l => linkState(l) === 'Rejected').length;
+  return `<h1>${esc(D.company)}</h1><p class="lede">Engineering BOMs and purchasing records reconnected with two complementary signals, a range on every number, and every finding routed to an owner.</p>${readinessBanner()}
+  <div class="grid g4">
+    <div class="card kpi"><div class="lab">12-month spend in scope</div><div class="val">${K(k.total_spend_12m)}</div><div class="sub">${D.links.length} purchasing SKUs · ${D.parts.length} engineering parts</div></div>
+    <div class="card kpi"><div class="lab">Proposed linkage coverage</div><div class="val">${pct(coverage())}</div><div class="sub">${ver} verified so far · rest proposed, awaiting sign-off</div></div>
+    <div class="card kpi"><div class="lab">Spend newly attributed to BOMs</div><div class="val">${R(att)}</div><div class="sub">material cost name-only matching could not see</div></div>
+    <div class="card kpi"><div class="lab">Spend Integrity Gap</div><div class="val">${R(k.gap)}</div><div class="sub">${pct(k.gap_pct.p10)}–${pct(k.gap_pct.p90)} of spend to investigate</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h2>One evidence layer, three tracks</h2><div class="eco">
+      <div class="layer stripe acc"><h3>Foundation · Track 3</h3><div class="muted">Trusted part identity: BOM lines linked to spend with evidence and confidence ranges.</div></div>
+      <div class="layer stripe ok"><h3>Standardization · Track 1</h3><div class="muted">On the connected data: shared parts, near-duplicates, net saving after spec-upgrade cost.</div></div>
+      <div class="layer stripe"><h3>Customer value · Track 2</h3><div class="muted">Roadmap: warranty and feedback signals decide what stays different.</div></div>
+      <div class="layer wf"><h3>Workflow across all layers</h3><div>Resolution board, department routing, audience-specific messages, and a feedback loop: every human decision updates the links.</div></div>
+    </div></div>
+    <div class="card"><h2>Link status</h2>
+      <div class="row" style="margin-bottom:12px"><span class="chip c-ok">${ver} verified</span><span class="chip c-warn">${D.links.filter(l => linkState(l) === 'Proposed').length} proposed</span><span class="chip c-bad">${rej} rejected</span><span class="chip c-idle">${D.links.filter(l => linkState(l) === 'Unresolved').length} unresolved</span></div>
+      <div class="muted" style="margin-bottom:8px">${k.n_hidden} hidden links proposed from purchase behavior · ${k.n_twins} look-alike twins flagged · ERP postings for ${k.backflushed} of ${k.assessed} SKUs are BOM-derived (excluded as evidence)</div>
+      <h3 style="margin-top:14px">Open items by department</h3>
+      ${rangeBars(Object.entries(byDept).map(([d, n]) => ({label:d, value:n, color:'var(--accent)'})), {fmt:v => v + (v===1?' item':' items')})}
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>Money ladder (live)</h2>${ladder()}</div>
+  <div class="card" style="margin-top:14px"><div class="spread"><h2>Top decisions this week</h2><a class="btn" href="#board">Open resolution board</a></div>
+  <div class="scroll"><table><thead><tr><th>Item</th><th>Owner</th><th class="r">Spend involved (P10–P90)</th><th>Status</th></tr></thead><tbody>
+  ${D.cards.slice(0,6).map(c => `<tr><td><div style="font-weight:600">${esc(c.title)}</div><div class="muted" style="font-size:12px">${esc(c.next_action)}</div></td><td>${c.owners.join(', ')}</td><td class="r mono">${R(c.rng)}</td><td>${stateChip(cardState(c))}</td></tr>`).join('')}
+  </tbody></table></div></div>`;
+};
+const stateChip = s => ({Verified:'<span class="chip c-ok">Verified</span>', Rejected:'<span class="chip c-bad">Rejected</span>', Unresolved:'<span class="chip c-idle">Unresolved</span>', Assigned:'<span class="chip c-acc">Assigned</span>', 'In review':'<span class="chip c-acc">In review</span>'})[s] || '<span class="chip c-warn">Proposed</span>';
+
+V.motor = () => {
+  const heroSku = LINK['MTR-X72'] && LINK['MTR-X72'].part ? 'MTR-X72' : (D.links.find(x => x.evidence_class === 'Hidden link') || {}).sku;
+  if (!heroSku) return `<h1>Hidden links</h1>${readinessBanner()}<div class="card"><p>No hidden links were proposed in this dataset. ${CAPS.behavior_matching === false ? 'Behavior matching needs monthly production and receipts (12+ months).' : 'Every link here is supported by its name, or left unresolved.'}</p><a class="btn" href="#links">Open the link map</a></div>`;
+  const l = LINK[heroSku], guess = l.best_name_part, st = linkState(l);
+  const exp = win3(D.expected[l.part]), pur = win3(D.receipts[heroSku]), g = win3(D.expected[guess]);
+  const labels = D.months.slice(2);
+  const pc = productCosts().filter(p => D.bom.some(b => b.eng_part_id === l.part && b.product_id === p.product_id));
+  return `<h1>The mystery motor</h1><p class="lede">One purchasing line, one engineering part, no shared identifier. Follow how RECON proposes the link and what changes once an engineer verifies it.</p>
+  <div class="steps">
+  <div class="step card"><h2>Two records nobody has connected</h2><div class="vs">
+    <div class="record"><div class="sys">Engineering BOM (PLM)</div><div class="pn">${l.part}</div><div>${esc(l.part_description)}</div><div class="muted">Used in ${D.bom.filter(b => b.eng_part_id===l.part).map(b => (D.products.find(p => p.product_id===b.product_id)||{}).product_name + ' ×' + b.qty_per_unit).join(', ')}</div></div>
+    <div class="q">?</div>
+    <div class="record"><div class="sys">Purchasing (spend cube)</div><div class="pn">${heroSku}</div><div>“${esc(l.sku_description)}”</div><div class="muted">${esc(l.supplier)} · $${l.price.toFixed(2)} · ${K(l.spend12)} in the last 12 months</div></div>
+  </div></div>
+  <div class="step card"><h2>Name signal: ${sc(l.name)} against the true part</h2><p class="muted" style="margin-top:0">The descriptions share no words. Name matching's best guess is <span class="mono">${guess}</span> (${esc(partDesc[guess])}) at ${sc(l.best_name_score)}, still below the 0.55 bar, so name-only matching leaves this ${K(l.spend12)} unlinked.</p>
+    <div class="meter" style="max-width:360px"><i style="width:${l.name*100}%"></i></div></div>
+  <div class="step card"><h2>Behavior signal: purchases follow the motor's expected demand</h2>
+    <p class="muted" style="margin-top:0">Expected demand = ${D.bom.filter(b => b.eng_part_id===l.part).map(b => b.qty_per_unit + ' × ' + ((D.products.find(p => p.product_id===b.product_id)||{}).product_name||b.product_id) + ' built').join(' + ')}. Rolling 3-month totals. The SKU follows it; the name-only guess does not.</p>
+    ${lineChart([{name:`Expected demand, ${l.part}`, data:exp, color:'var(--accent)', w:3},{name:`Purchased, ${heroSku}`, data:pur, color:'var(--ink)', dash:'5 4', dots:true},{name:`Expected demand, ${guess} (name-only guess)`, data:g, color:'var(--idle)'}], labels, {title:'Purchased vs expected'})}
+    <div class="grid g3" style="margin-top:12px">
+      <div class="kpi"><div class="lab">Behavior fit</div><div class="val">${sc(l.behavior)}</div><div class="sub">shape² × volume plausibility</div></div>
+      <div class="kpi"><div class="lab">Volume share</div><div class="val">${l.share != null ? (l.share*100).toFixed(0) + '%' : 'n/a'}</div><div class="sub">of the part's otherwise uncovered demand</div></div>
+      <div class="kpi"><div class="lab">Stability</div><div class="val">${l.stability_txt}</div><div class="sub">bootstrap resamples keep this link</div></div>
+    </div></div>
+  <div class="step card"><h2>Proposed, then verified by a person</h2>
+    <p class="muted" style="margin-top:0">Score band ${bandTxt(l)} on the synthetic answer key. The link stays proposed until engineering confirms the drawing.</p>
+    <div class="row">${chipFor(st, l.evidence_class)}
+      <button class="good" onclick="setLink('${heroSku}','Verified')">Verify link (engineering)</button>
+      <button class="danger" onclick="setLink('${heroSku}','Rejected')">Reject</button>
+      <button onclick="setLink('${heroSku}','Proposed')">Reset</button></div>
+    <div class="scroll" style="margin-top:12px"><table><thead><tr><th>Product</th><th class="r">Unit material cost, name-only</th><th class="r">Unit material cost, now</th><th class="r">Units / 12 mo</th></tr></thead><tbody>
+    ${pc.map(p => `<tr><td>${esc(p.product_name)}</td><td class="r mono">$${p.cb.toFixed(2)}</td><td class="r mono" style="font-weight:600">$${p.ca.toFixed(2)}</td><td class="r mono">${num(p.units)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="muted">Reject the link and both products fall back to the understated cost. This is spend newly attributed to BOMs, not a saving.</p></div>
+  </div>`;
+};
+
+let linkFilter = 'All', linkQ = '';
+V.links = () => {
+  const classes = ['All','Hidden link','Look-alike (twin)','Signals disagree','Both signals agree','One strong signal','Name only (no BOM demand)','Unresolved'];
+  const rows = D.links.filter(l => (linkFilter === 'All' || l.evidence_class === linkFilter) && (!linkQ || (l.sku + l.sku_description + (l.part||'') + l.part_description).toLowerCase().includes(linkQ.toLowerCase())));
+  return `<h1>Link map</h1><p class="lede">Every purchasing SKU with its proposed engineering part, both signals, and a confidence band. Select a row for its evidence passport.</p>
+  <div class="row" style="margin-bottom:12px"><input id="q" aria-label="Search SKUs and parts" placeholder="Search SKU, description, part" value="${esc(linkQ)}" oninput="linkQ=this.value;render();this.focus();this.setSelectionRange(this.value.length,this.value.length)">
+  <div class="tabs" style="margin:0">${classes.map(c => `<button class="${c===linkFilter?'on':''}" onclick="linkFilter='${c}';render()">${c} (${c==='All'?D.links.length:D.links.filter(l => l.evidence_class===c).length})</button>`).join('')}</div></div>
+  <div class="card scroll"><table><thead><tr><th>Purchasing SKU</th><th>Proposed part</th><th class="r">Name</th><th class="r">Behavior</th><th>Confidence band</th><th class="r">Stability</th><th class="r">12-mo spend</th><th>Status</th></tr></thead><tbody>
+  ${rows.map(l => `<tr class="click" onclick="openPassport('${l.sku}')" tabindex="0" onkeydown="if(event.key==='Enter')openPassport('${l.sku}')">
+    <td><div class="mono" style="font-weight:600">${l.sku}</div><div class="muted" style="font-size:12px">${esc(l.sku_description)} · ${esc(l.supplier)}</div></td>
+    <td>${l.part ? `<div class="mono">${l.part}</div><div class="muted" style="font-size:12px">${esc(l.part_description)}</div>` : '<span class="muted">none above threshold</span>'}</td>
+    <td class="r mono">${sc(l.name)}</td><td class="r mono">${sc(l.behavior)}</td><td style="font-size:12px">${l.band || '–'}</td>
+    <td class="r mono">${l.stability_txt}</td><td class="r mono">${K(l.spend12)}</td><td>${chipFor(linkState(l), l.evidence_class)}${l.warnings.length ? `<div style="font-size:11.5px;color:var(--warn);margin-top:3px">${esc(l.warnings.join('; '))}</div>` : ''}</td></tr>`).join('')}
+  </tbody></table></div>`;
+};
+function openPassport(sku){
+  const l = LINK[sku], d = $('#drawer'); const st = linkState(l);
+  const labels = D.months.slice(2);
+  const series = [{name:'Purchased (rolling 3 mo)', data:win3(D.receipts[sku]), color:'var(--ink)', dash:'5 4', dots:true}];
+  if (l.part && D.expected[l.part].some(v => v > 0)) { const e = win3(D.expected[l.part]); const sh = l.share || 1; series.unshift({name:`Expected × share, ${l.part}`, data:e.map(v => v*sh), color:'var(--accent)', w:3}); }
+  if (l.best_name_part && l.best_name_part !== l.part && D.expected[l.best_name_part].some(v => v > 0)) series.push({name:`Expected, ${l.best_name_part} (best name match)`, data:win3(D.expected[l.best_name_part]), color:'var(--idle)'});
+  const rows = [
+    ['Purchasing record', `<span class="mono">${sku}</span> · “${esc(l.sku_description)}” · ${esc(l.supplier)} · $${l.price.toFixed(3)}`],
+    ['Proposed engineering part', l.part ? `<span class="mono">${l.part}</span> · ${esc(l.part_description)}` : 'None: left unresolved'],
+    ['Decision route', esc(l.route)], ['Evidence class', esc(l.evidence_class)],
+    ['Name signal', `${sc(l.name)} (best name candidate <span class="mono">${l.best_name_part}</span> ${sc(l.best_name_score)})`],
+    ['Behavior signal', `${sc(l.behavior)}${l.share != null ? ` · volume share ${(l.share*100).toFixed(0)}%` : ''}`],
+    ['Quantities used', `Matched on <b>Purchased</b> + name. Posted: ${esc(l.backflush || 'n/a')}.`],
+    ['Confidence', bandTxt(l)], ['Stability', `${l.stability_txt} block-bootstrap resamples keep this decision`],
+    ['Spend involved', `${R(l.spend12_rng)} (12 months, P10–P90)`],
+    ['Look-alike group', l.twin_group.length ? l.twin_group.map(x => `<span class="mono">${x}</span>`).join(', ') + ' share a demand pattern; name/spec broke the tie' : 'None'],
+    ['Warnings', l.warnings.length ? esc(l.warnings.join('; ')) : 'None'],
+    ['Required approval', l.part ? 'Engineering confirms spec/drawing; Procurement updates cross-reference' : 'Procurement classifies (indirect spend or manual map)'],
+  ];
+  d.innerHTML = `<div class="spread"><div><div class="muted" style="font-size:12px">EVIDENCE PASSPORT</div><h2 class="mono" style="margin-top:2px">${sku}${l.part ? ' → ' + l.part : ''}</h2></div><button onclick="closePassport()" aria-label="Close passport">Close</button></div>
+    <div class="row" style="margin:6px 0 12px">${chipFor(st, l.evidence_class)}${l.part ? `<button class="good" onclick="setLink('${sku}','Verified');openPassport('${sku}')">Verify</button><button class="danger" onclick="setLink('${sku}','Rejected');openPassport('${sku}')">Reject</button><button onclick="setLink('${sku}','Proposed');openPassport('${sku}')">Reset</button>` : ''}${API ? `<a class="btn" href="/api/export/passport/${encodeURIComponent(sku)}.pdf">Download PDF</a>` : ''}</div>
+    ${lineChart(series, labels, {h:300, w:640, title:'Purchased vs expected'})}
+    <table style="margin-top:12px"><tbody>${rows.map(([a, b]) => `<tr><th style="width:36%;text-transform:none;letter-spacing:0;font-size:12.5px">${a}</th><td>${b}</td></tr>`).join('')}</tbody></table>
+    <p class="muted" style="font-size:12px">Scores are model-fit measures, not probabilities. Bands are calibrated on synthetic data and need real-data calibration in a pilot.</p>`;
+  d.classList.add('open'); d.focus?.();
+}
+function closePassport(){ $('#drawer').classList.remove('open'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePassport(); });
+
+let recPart = null;
+V.reconcile = () => {
+  if (!Object.keys(D.reconciliation).length) return `<h1>Reconciliation</h1>${readinessBanner()}<div class="card"><p>Count-to-count reconciliation needs monthly receipts, production, and physical counts with at least two count dates. Upload physical_counts.csv to unlock usage-shift and excess-usage findings.</p><a class="btn" href="#data">See what each file unlocks</a></div>`;
+  const flagged = D.findings.filter(f => ['CONSUMPTION_SHIFT','PERSISTENT_EXCESS'].includes(f.type));
+  const parts = Object.keys(D.reconciliation);
+  recPart = recPart || (flagged[0] && flagged[0].part) || parts[0];
+  const rc = D.reconciliation[recPart], f = D.findings.find(x => x.part === recPart);
+  const labels = rc.map(r => r.end);
+  return `<h1>Reconciliation</h1><p class="lede">Count-to-count material balance. Observed use = opening count + purchased − closing count. ERP postings are shown beside it, because backflushed postings repeat the BOM and cannot reveal a discrepancy.</p>
+  <div class="grid g2">${flagged.map(x => `<div class="card stripe ${x.type==='CONSUMPTION_SHIFT'?'bad':'warn'}" style="cursor:pointer" onclick="recPart='${x.part}';render()"><div class="spread"><h3>${x.type==='CONSUMPTION_SHIFT'?'Usage shift (investigation lead)':'Persistent excess (investigation lead)'}</h3><span class="mono">${R(x.rng)}</span></div>
+    <div class="mono">${x.part} · ${esc(partDesc[x.part])}</div><div class="muted" style="margin-top:4px">${esc(x.metric)}</div>
+    ${(x.implied||[]).map(i => `<div style="margin-top:4px">${i.product}: implied <b>${i.implied.toFixed(2)}</b>/unit (90% CI ${i.lo.toFixed(2)}–${i.hi.toFixed(2)}) vs BOM ${i.bom}</div>`).join('')}
+    ${x.book_minus_shelf ? `<div style="margin-top:4px">ERP book stock exceeds shelf count by <b>${num(x.book_minus_shelf)}</b> units</div>` : ''}
+    <div class="muted" style="margin-top:6px">Owner: ${x.owner.join(', ')} · ${esc(x.action)}</div></div>`).join('')}</div>
+  <div class="card" style="margin-top:14px"><div class="spread"><h2>Interval balance · <span class="mono">${recPart}</span></h2>
+    <select aria-label="Choose part" onchange="recPart=this.value;render()">${parts.map(p => `<option ${p===recPart?'selected':''} value="${p}">${p} · ${esc(partDesc[p])}</option>`).join('')}</select></div>
+    ${lineChart([{name:'Observed use ÷ expected (physical counts)', data:rc.map(r => r.ratio_observed), color:'var(--bad)', w:3, dots:true},{name:'Posted ÷ expected (ERP)', data:rc.map(r => r.ratio_posted), color:'var(--idle)', dash:'5 4'},{name:'BOM = 1.0', data:rc.map(() => 1), color:'var(--line)'}], labels, {h:210, yfmt:v => v.toFixed(2), title:'Ratio by count interval'})}
+    <div class="scroll"><table style="margin-top:10px"><thead><tr><th>Count interval</th><th class="r">Purchased</th><th class="r">Expected</th><th class="r">Observed use</th><th class="r">Posted</th><th class="r">Observed ÷ expected</th><th class="r">Book − shelf</th></tr></thead><tbody>
+    ${rc.map(r => `<tr><td class="mono">${r.interval}</td><td class="r mono">${num(r.purchased)}</td><td class="r mono">${num(r.expected)}</td><td class="r mono">${num(r.observed_use)}</td><td class="r mono">${num(r.posted)}</td><td class="r mono" style="${r.ratio_observed>1.04?'color:var(--bad);font-weight:600':''}">${r.ratio_observed?.toFixed(3)}</td><td class="r mono">${num(r.book_minus_shelf)}</td></tr>`).join('')}
+    </tbody></table></div></div>
+  <div class="card stripe ok" style="margin-top:14px"><h2>Explained, not flagged</h2>${D.inventory_builds.map(b => `<div><span class="mono">${b.sku}</span> received ${num(b.received)} in ${b.month}. Counted stock rose ${num(b.stock_rise)} in ${b.interval}, explaining ${(b.explained*100).toFixed(0)}% of the excess purchase. ${esc(b.verdict)}.</div>`).join('')}</div>`;
+};
+
+V.integrity = () => {
+  const I = D.integrity;
+  return `<h1>Spend integrity</h1><p class="lede">Linkage coverage and the integrity gap are separate measures. A SKU can be correctly linked and still show a consumption variance. Buckets are mutually exclusive: each dollar is assigned once, by the precedence shown.</p>
+  <div class="grid g3"><div class="card kpi"><div class="lab">Proposed linkage coverage</div><div class="val">${pct(coverage())}</div><div class="sub">of 12-month spend; ${D.links.filter(l => linkState(l)==='Verified').length} links verified</div></div>
+  <div class="card kpi"><div class="lab">Spend Integrity Gap</div><div class="val">${R(I.gap)}</div><div class="sub">${pct(I.gap_pct.p10)}–${pct(I.gap_pct.p90)} of ${K(I.total_spend_12m)}</div></div>
+  <div class="card kpi"><div class="lab">Explained by inventory</div><div class="val">${K(I.explained_by_inventory)}</div><div class="sub">bulk buys matched by counted stock; excluded</div></div></div>
+  <div class="card" style="margin-top:14px"><h2>Spend to investigate, by bucket (P10–P90, P50 marked)</h2>
+  ${rangeBars(I.buckets.map((b, i) => ({label:`${i+1}. ${b.bucket} (${b.n})`, p10:b.p10, p50:b.p50, p90:b.p90})))}
+  <div style="margin-top:16px"><h3>Where these dollars stand</h3>${ladder()}</div>
+  <p class="muted" style="margin-top:12px">Precedence: unresolved spend, then inactive-part purchasing, then possible BOM discrepancy, then unexplained consumption. Findings are investigation leads, not confirmed waste.</p></div>`;
+};
+
+V.cost = () => {
+  const pc = productCosts(), live = liveAttributed();
+  return `<h1>True product cost</h1><p class="lede">Material cost per unit from BOM quantities × the volume-weighted price actually paid. Shared parts are priced once and used by every product that carries them. Verify or reject links and these numbers update.</p>
+  <div class="card kpi" style="max-width:420px;margin-bottom:14px"><div class="lab">Spend newly attributed to BOMs (12 months, live)</div><div class="val">${K(live)}</div><div class="sub">at load: ${R(D.kpis.attributed)} (P10–P90)</div></div>
+  <div class="card scroll"><table><thead><tr><th>Product</th><th class="r">Name-only links</th><th class="r">RECON links</th><th class="r">Difference</th><th class="r">Units / 12 mo</th><th>Lines priced only by RECON</th></tr></thead><tbody>
+  ${pc.map(p => { const nb = partPrices(nameOnlyLinks()); const newly = p.lines.filter(b => !(b.eng_part_id in nb) && !p.unpriced.includes(b.eng_part_id)).map(b => b.eng_part_id);
+    return `<tr><td><div style="font-weight:600">${esc(p.product_name)}</div><div class="muted mono" style="font-size:11.5px">${p.product_id} · ${p.lines.length} BOM lines</div></td><td class="r mono">$${p.cb.toFixed(2)}</td><td class="r mono" style="font-weight:600">$${p.ca.toFixed(2)}</td><td class="r mono" style="color:${p.ca-p.cb>0.01?'var(--bad)':'var(--muted)'}">${p.ca-p.cb>0.005?'+':''}$${(p.ca-p.cb).toFixed(2)}</td><td class="r mono">${num(p.units)}</td><td>${newly.map(j => `<span class="mono">${j}</span>`).join(', ') || '<span class="muted">none</span>'}${p.unpriced.length ? `<div style="color:var(--warn);font-size:12px">Unpriced: ${p.unpriced.join(', ')}</div>` : ''}</td></tr>`; }).join('')}
+  </tbody></table></div>
+  <div class="card" style="margin-top:14px"><h2>Price comparison across suppliers · indicative (lowest observed price is a benchmark, not guaranteed)</h2><div class="scroll"><table><thead><tr><th>Part</th><th>Supplier · SKU · price · 12-mo qty</th><th class="r">Gap to lowest price (P10–P90)</th></tr></thead><tbody>
+  ${D.price_gaps.map(g => `<tr><td><div class="mono">${g.part}</div><div class="muted" style="font-size:12px">${esc(partDesc[g.part])}</div></td><td>${g.skus.map((s, i) => `<div><span class="mono">${s}</span> · ${esc(g.suppliers[i])} · $${g.prices[i].toFixed(3)} · ${num(g.qty_12m[i])}</div>`).join('')}</td><td class="r mono">${R(g.rng)}</td></tr>`).join('')}
+  </tbody></table></div></div>`;
+};
+
+let A = null;
+V.standard = () => {
+  const st = D.standardization; A = A || {vd:st.assumptions.volume_discount[1], cc:st.assumptions.carrying_cost[1], q:st.assumptions.qualification[1]};
+  const prods = D.products.map(p => p.product_id);
+  const net = c => A.vd*c.price_into*(c.vol_from+c.vol_into) + A.cc - (c.price_into-c.price_from)*c.vol_from - A.q/st.assumptions.amortize_years;
+  return `<h1>Standardization</h1><p class="lede">Track 1 runs on the connected data. Shared parts are the platform core; near-duplicates are candidates to merge into the higher-spec part. The business case nets the spec-upgrade cost and qualification against volume benefits. Engineering confirms compatibility.</p>
+  <div class="grid g2"><div class="card"><h2>Parts already shared across products</h2><div class="scroll"><table class="heat"><thead><tr><th style="text-align:left">Part</th>${prods.map(p => `<th>${p}</th>`).join('')}</tr></thead><tbody>
+  ${st.common.map(c => `<tr><td style="text-align:left"><span class="mono">${c.part}</span><div class="muted" style="font:11px var(--body)">${esc(c.description)}</div></td>${prods.map(p => { const q = (D.bom.find(b => b.product_id===p && b.eng_part_id===c.part)||{}).qty_per_unit; return `<td style="${q?'background:var(--accent-soft);color:var(--accent)':''}">${q||''}</td>`; }).join('')}</tr>`).join('')}
+  </tbody></table></div></div>
+  <div class="card"><h2>Assumptions (editable)</h2><div class="grid" style="gap:10px">
+    <label>Volume discount on merged volume <input id="a-vd" type="number" step="0.01" value="${A.vd}" onchange="A.vd=+this.value;render()"></label>
+    <label>Carrying cost avoided per part number per year ($) <input id="a-cc" type="number" step="100" value="${A.cc}" onchange="A.cc=+this.value;render()"></label>
+    <label>One-time qualification cost ($), amortized over ${st.assumptions.amortize_years} years <input id="a-q" type="number" step="500" value="${A.q}" onchange="A.q=+this.value;render()"></label></div>
+    <div class="formula" style="margin-top:12px">net = discount × price_into × (vol_from + vol_into)
+    + carrying cost avoided
+    − (price_into − price_from) × vol_from
+    − qualification ÷ ${st.assumptions.amortize_years}</div></div></div>
+  <div class="grid g2" style="margin-top:14px">${st.candidates.map(c => { if (!c.net_saving) return `<div class="card stripe"><h3>Merge <span class="mono">${c.merge_from}</span> into <span class="mono">${c.merge_into}</span></h3><div>${esc(c.from_desc)} → ${esc(c.into_desc)}</div><div class="muted">Net saving needs production volumes (upload production.csv).</div></div>`; const n = net(c); return `<div class="card stripe ${n>0?'ok':'bad'}"><div class="spread"><h3>Merge <span class="mono">${c.merge_from}</span> into <span class="mono">${c.merge_into}</span></h3><span class="chip ${n>0?'c-ok':'c-bad'}">${n>0?'Worth checking':'Does not pay'}</span></div>
+    <div>${esc(c.from_desc)} → ${esc(c.into_desc)}</div><div class="muted">Spec similarity ${c.similarity.toFixed(2)} · used in ${c.products_from.join(', ')} → ${c.products_into.join(', ')}</div>
+    <div class="grid g3" style="margin-top:10px"><div class="kpi"><div class="lab">Net / year (your inputs)</div><div class="val" style="color:${n>0?'var(--ok)':'var(--bad)'}">${n<0?'−':''}${K(Math.abs(n))}</div></div>
+    <div class="kpi"><div class="lab">Range (low–high assumptions)</div><div class="val" style="font-size:15px">${K(c.net_saving.low)} to ${K(c.net_saving.high)}</div></div>
+    <div class="kpi"><div class="lab">Top-supplier share</div><div class="val" style="font-size:15px">${c.top_supplier_share_before!=null?pct(c.top_supplier_share_before):'–'} → ${c.top_supplier_share_after!=null?pct(c.top_supplier_share_after):'–'}</div></div></div>
+    <div class="muted" style="margin-top:8px">Spec upgrade cost: ${K((c.price_into-c.price_from)*c.vol_from)} / year for ${num(c.vol_from)} units moved to the higher-spec part.</div></div>`; }).join('')}</div>`;
+};
+
+const COLS = ['Proposed','Assigned','In review','Verified','Rejected','Unresolved'];
+let deptF = 'All';
+V.board = () => {
+  const depts = ['All', ...new Set(D.cards.flatMap(c => c.owners))];
+  const cards = D.cards.filter(c => deptF === 'All' || c.owners.includes(deptF));
+  return `<h1>Resolution board</h1><p class="lede">Every finding becomes a card routed to its owner, sorted by spend at stake × (1 − confidence). Drag cards between columns or use the status menu. Verifying a link card verifies the link everywhere.</p>
+  <div class="tabs">${depts.map(d => `<button class="${d===deptF?'on':''}" onclick="deptF='${d}';render()">${d}</button>`).join('')}</div>
+  <div class="board">${COLS.map(col => `<div class="col" data-col="${col}" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropCard(event,'${col}')"><h4><span>${col}</span><span class="muted">${cards.filter(c => cardState(c)===col).length}</span></h4>
+    ${cards.filter(c => cardState(c)===col).map(c => `<div class="kcard" draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${c.id}')">
+      <div class="spread"><span class="mono muted" style="font-size:11px">${c.id} · ${c.type.replace(/_/g,' ').toLowerCase()}</span></div>
+      <div class="t">${esc(c.title)}</div><div class="m">${esc(c.subtitle)}</div>
+      <div class="m"><b class="mono">${R(c.rng)}</b> · confidence ${Math.round(c.confidence*100)}% · ${c.age_days}d old</div>
+      <div class="m">Owner: ${c.owners.join(', ')}</div>
+      <div class="row" style="margin-top:6px"><select aria-label="Status for ${c.id}" onchange="moveCard('${c.id}',this.value)">${COLS.map(x => `<option ${x===col?'selected':''}>${x}</option>`).join('')}</select><button onclick="location.hash='comms';commsCard='${c.id}'">Draft messages</button></div>
+    </div>`).join('')}</div>`).join('')}</div>`;
+};
+function dropCard(e, col){ e.preventDefault(); moveCard(e.dataTransfer.getData('text/plain'), col); }
+function moveCard(id, col){
+  S.card[id] = col; const c = D.cards.find(x => x.id === id);
+  if (c && c.type === 'VERIFY_LINK') { if (col === 'Verified') S.link[c.sku] = 'Verified'; else if (col === 'Rejected') S.link[c.sku] = 'Rejected'; else if (['Verified','Rejected'].includes(S.link[c.sku])) S.link[c.sku] = 'Proposed'; }
+  save(); toast(`${id} moved to ${col}`); render();
+}
+
+let commsCard = null, aud = 'Engineer';
+V.comms = () => {
+  commsCard = commsCard || D.cards[0].id; const c = D.cards.find(x => x.id === commsCard);
+  return `<h1>Communications</h1><p class="lede">The same finding, written for each audience, plus the weekly steering update for the client. Language rules are built in: proposed links stay proposed, money is shown as ranges, findings are leads.</p>
+  <div class="grid g2"><div class="card"><div class="row" style="margin-bottom:10px"><select aria-label="Choose finding" onchange="commsCard=this.value;render()">${D.cards.map(x => `<option value="${x.id}" ${x.id===commsCard?'selected':''}>${x.id} · ${esc(x.title)}</option>`).join('')}</select></div>
+    <div class="tabs">${Object.keys(c.messages).map(a => `<button class="${a===aud?'on':''}" onclick="aud='${a}';render()">${a}</button>`).join('')}</div>
+    <pre class="msg" id="msg">${esc(c.messages[aud])}</pre><div class="row" style="margin-top:10px"><button class="primary" onclick="copyText('msg')">Copy message</button>${API ? `<button onclick="aiDraft()">Draft with AI</button>` : ''}<span class="muted" id="draftsrc" style="font-size:12px">${API ? (API_INFO.ai_drafting ? 'AI drafting on' : 'AI drafting off: set ANTHROPIC_API_KEY') : 'Template draft'}</span></div></div>
+  <div class="card"><h2>Weekly steering update (client one-pager)</h2><pre class="msg" id="op">${esc(D.onepager)}</pre><div class="row" style="margin-top:10px"><button class="primary" onclick="copyText('op')">Copy one-pager</button>${API ? '<a class="btn" href="/api/export/onepager.pdf">Download PDF</a>' : ''}</div></div></div>`;
+};
+async function aiDraft(){
+  const el = $('#msg'), src = $('#draftsrc'); src.textContent = 'Drafting…';
+  try { const r = await fetch('/api/draft', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({card_id:commsCard, audience:aud})});
+    const j = await r.json(); el.textContent = j.text; src.textContent = j.source; }
+  catch(e) { src.textContent = 'Drafting failed: is the local server running?'; }
+}
+async function uploadCSVs(ev){
+  ev.preventDefault(); const out = $('#upout'); const fd = new FormData();
+  const files = $('#upfiles').files; if (!files.length) { out.textContent = 'Choose the CSV files first.'; return; }
+  for (const f of files) fd.append('files', f); fd.append('company', $('#upname').value || 'Uploaded company');
+  out.textContent = 'Running the engine (about 20-40 seconds)…';
+  try { const r = await fetch('/api/upload', {method:'POST', body:fd}); const j = await r.json();
+    if (!r.ok) { out.innerHTML = '<span style="color:var(--bad)">' + esc(j.detail) + '</span>'; return; }
+    out.textContent = `Done: ${j.links} SKUs processed. Reloading…`; try { localStorage.removeItem('recon-state'); } catch(e) {} setTimeout(() => location.reload(), 600); }
+  catch(e) { out.textContent = 'Upload failed: is the local server running?'; }
+}
+async function resetDemo(){ await fetch('/api/reset', {method:'POST'}); try { localStorage.removeItem('recon-state'); } catch(e) {} location.reload(); }
+function copyText(id){ const t = document.getElementById(id).textContent; try { navigator.clipboard.writeText(t).then(() => toast('Copied'), () => toast('Copy blocked: select the text instead')); } catch(e) { toast('Copy blocked: select the text instead'); } }
+
+let proofSet = 'B';
+const SETLAB = {A:'Development', B:'Blind test', C:'Unfamiliar company', U:'Your upload'};
+V.proof = () => {
+  if (!D.benchmark[proofSet]) proofSet = Object.keys(D.proof_sets)[0];
+  const bm = D.benchmark[proofSet], hard = D.benchmark['hard_' + proofSet], seg = D.benchmark['segments_' + proofSet], cal = D.calibration[proofSet];
+  const errs = (D.benchmark['errors_' + proofSet] || []).filter(e => e.method === 'RECON' || e.method === 'Name only');
+  const sig = (D.proof_signals || {})[proofSet];
+  const methods = ['Name only','Behavior only','RECON'], col = {'Name only':'var(--idle)','Behavior only':'var(--warn)','RECON':'var(--accent)'};
+  const stress = D.stress; const months = [6,12,18,24], noises = [0,0.05,0.1,0.2];
+  const wins = months.flatMap(m => noises.map(n => { const g = mm => stress.find(s => s.months===m && s.noise===n && s.method===mm).f1; return g('RECON') >= g('Name only') - 1e-9; }));
+  return `<h1>Proof</h1><p class="lede">Matching scored against the answer key. Company A (${esc(D.proof_company)}) is where thresholds were tuned. Company B (${esc(D.blind_company)}) is a blind test: different seed and new description vocabulary, settings frozen. Source: ${esc(D.proof_source)}.</p>
+  <div class="tabs">${Object.entries(D.proof_sets).sort((a, b) => 'BCAU'.indexOf(a[0]) - 'BCAU'.indexOf(b[0])).map(([k, n]) => `<button class="${proofSet===k?'on':''}" onclick="proofSet='${k}';render()">${SETLAB[k]||k} · ${esc(n)}</button>`).join('')}</div>
+  ${sig ? `<div class="card stripe ${sig.verdict==='strong'?'ok':sig.verdict==='moderate'?'warn':'bad'}" style="margin-bottom:14px"><b>Behavior self-check on this dataset: ${esc(sig.verdict)}${sig.strength!=null?' ('+sig.strength.toFixed(2)+')':''}.</b> ${esc(sig.note||'')} <span class="muted">Measured without the answer key, from links whose names are already clear.</span></div>` : ''}
+  ${proofSet==='C' ? `<p class="lede" style="margin-top:-4px">Procedurally generated manufacturer the method never saw: different products, parts, BOMs, supplier naming and lumpier purchasing. Settings frozen. This is the honest answer to "what if we gave you a stranger's data?"</p>` : ''}
+  <div class="grid g3">${bm.map(b => `<div class="card stripe ${b.method==='RECON'?'acc':''}"><h3>${b.method}</h3><div class="grid g3" style="gap:6px">
+    <div class="kpi"><div class="lab">Precision</div><div class="val">${(b.precision*100).toFixed(0)}%</div></div><div class="kpi"><div class="lab">Recall</div><div class="val">${(b.recall*100).toFixed(0)}%</div></div><div class="kpi"><div class="lab">F1</div><div class="val">${b.f1.toFixed(2)}</div></div></div>
+    <div class="muted" style="margin-top:6px">${b.correct_links} correct · ${b.false_links} false link${b.false_links===1?'':'s'} · ${b.missed} missed · ${b.traps_linked} trap${b.traps_linked===1?'':'s'} linked</div></div>`).join('')}</div>
+  <div class="grid g2" style="margin-top:14px"><div class="card scroll"><h2>Hard cases</h2><table><thead><tr><th>SKU</th>${methods.map(m => `<th>${m}</th>`).join('')}</tr></thead><tbody>
+    ${Object.entries(hard).map(([s, r]) => `<tr><td class="mono">${s}</td>${methods.map(m => `<td><span class="chip ${r[m].startsWith('OK')?'c-ok':r[m].startsWith('MISS')?'c-idle':'c-bad'}">${esc(r[m])}</span></td>`).join('')}</tr>`).join('')}</tbody></table></div>
+  <div class="card scroll"><h2>Results by segment (correct / n)</h2><table><thead><tr><th>Segment</th>${methods.map(m => `<th class="r">${m}</th>`).join('')}</tr></thead><tbody>
+    ${[...new Set(seg.map(s => s.segment))].map(g => `<tr><td>${g}</td>${methods.map(m => { const x = seg.find(s => s.segment===g && s.method===m); return `<td class="r mono">${x.correct}/${x.n}</td>`; }).join('')}</tr>`).join('')}</tbody></table>
+    <h2 style="margin-top:16px">Calibration of proposed links (Wilson 95%)</h2><table><thead><tr><th>Score band</th><th class="r">n</th><th class="r">Correct</th><th class="r">95% interval</th></tr></thead><tbody>
+    ${cal.map(c => `<tr><td>${c.band}</td><td class="r mono">${c.n}</td><td class="r mono">${c.n?Math.round(c.precision*100)+'%':'–'}</td><td class="r mono">${c.n?Math.round(c.lo*100)+'–'+Math.round(c.hi*100)+'%':'–'}</td></tr>`).join('')}</tbody></table>
+    <p class="muted" style="font-size:12px">Small samples give wide intervals. A pilot with a verified crosswalk is needed to calibrate on real data.</p></div></div>
+  <div class="card scroll" style="margin-top:14px"><h2>Every error, name-only vs RECON</h2>${errs.length ? `<table><thead><tr><th>Method</th><th>SKU</th><th>Purchasing description</th><th>True part</th><th>Result</th></tr></thead><tbody>${errs.map(e => `<tr><td>${e.method}</td><td class="mono">${e.sku}</td><td>${esc(e.description)}</td><td class="mono">${e.truth}</td><td><span class="chip ${e.kind.startsWith('missed')?'c-idle':'c-bad'}">${esc(e.kind)}${e.predicted?' → '+e.predicted:''}</span></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No errors on this dataset.</p>'}
+  <p class="muted" style="font-size:12px">A miss leaves spend unresolved for review. A false link would put the wrong cost on a product, so RECON is tuned to prefer misses.</p></div>
+  <div class="card" style="margin-top:14px"><h2>Stress test on ${esc(D.proof_company)}: F1 by added noise in purchase data</h2>
+    <p class="muted" style="margin-top:0">RECON matched or outperformed name-only in ${wins.filter(Boolean).length} of ${wins.length} tested conditions. ${wins.filter(x => !x).length ? 'Exception: 12 months of history with 20% noise, where a few false links pulled F1 slightly below name-only.' : ''} With only 6 months, the behavior signal switches off and RECON falls back to names.</p>
+    <div class="grid g4">${months.map(m => `<div><h3>${m} months of history</h3>${lineChart(methods.map(mm => ({name:mm, data:noises.map(n => stress.find(s => s.months===m && s.noise===n && s.method===mm).f1), color:col[mm], w:mm==='RECON'?3:2, dots:true})), noises.map(n => (n*100)+'%'), {h:230, w:360, yfmt:v => v.toFixed(1), title:`F1 at ${m} months`})}</div>`).join('')}</div></div>`;
+};
+
+function readinessPanel(){
+  const R = D.readiness || {}; const c = R.capabilities || {};
+  const rows = [['Name matching','bom + parts_master + spend_cube','name_matching'],['Spend amounts, true product cost, price gaps','receipts, or annual_qty in spend_cube','spend_amounts'],['Behavior matching (hidden links)','production + receipts, 12+ months','behavior_matching'],['Count-to-count reconciliation','physical_counts with 2+ count dates','reconciliation'],['Backflush check','posted_consumption','backflush_check'],['Standardization net savings','production','standardization_savings']];
+  const ren = Object.entries(R.renamed_columns || {}).map(([t, m]) => `${t}: ${Object.entries(m).map(([a, b]) => a + ' → ' + b).join(', ')}`);
+  return `<div class="card" style="margin-bottom:14px"><h2>Data readiness for ${esc(D.company)}</h2><div class="scroll"><table><thead><tr><th>Analysis</th><th>Needs</th><th>Status</th></tr></thead><tbody>
+  ${rows.map(([a, n, k]) => `<tr><td>${a}</td><td class="muted">${n}</td><td>${c[k] ? '<span class="chip c-ok">Available</span>' : '<span class="chip c-idle">Not available</span>'}</td></tr>`).join('')}</tbody></table></div>
+  <div class="muted" style="margin-top:8px">History: ${R.months_of_history||0} months · physical count dates: ${R.count_dates||0}${ren.length ? ' · columns renamed automatically: ' + esc(ren.join('; ')) : ''}${(R.parts_added_from_bom||[]).length ? ' · ' + R.parts_added_from_bom.length + ' BOM parts missing from the part master were added' : ''}</div>
+  ${SIG ? `<div class="stripe ${SIG.verdict==='strong'?'ok':SIG.verdict==='moderate'?'warn':SIG.verdict==='weak'?'bad':''}" style="margin-top:10px"><b>Behavior self-check: ${esc(SIG.verdict)}${SIG.strength!=null?' ('+SIG.strength.toFixed(2)+')':''}</b> ${esc(SIG.note||'')}</div>` : ''}</div>`;
+}
+V.data = () => {
+  const bf = D.backflush.filter(b => b.corr != null);
+  const tables = ['products','production','parts_master','bom','spend_cube','receipts','posted_consumption','physical_counts','supplier_lead_times'];
+  const up = API ? `<div class="card stripe acc" style="margin-bottom:14px"><h2>Upload your own data</h2>
+    <form class="grid" style="gap:10px" onsubmit="uploadCSVs(event)">
+      <label for="upname">Company name</label><input id="upname" placeholder="e.g. Plant 3, gearbox family">
+      <label for="upfiles">CSV files (select all at once)</label><input id="upfiles" type="file" accept=".csv" multiple>
+      <div class="row"><button class="primary" type="submit">Run RECON on these files</button><button type="button" onclick="resetDemo()">Back to demo data</button></div>
+      <div id="upout" class="muted"></div></form>
+    <div class="muted" style="margin-top:8px;font-size:12.5px">Minimum: bom, parts_master, spend_cube. Everything else is optional and unlocks more analysis; common ERP column names (Part Number, Vendor, Unit Cost, GR Qty…) are recognized. Blank templates: ${tables.map(t => `<a href="/api/template/${t}.csv">${t}.csv</a>`).join(' · ')}. ground_truth.csv scores the results on your data.</div></div>`
+    : `<div class="card stripe" style="margin-bottom:14px"><h3>Upload your own data</h3><div class="muted">Available when you run the local server (python run.py, then open http://localhost:8000).</div></div>`;
+  return `<h1>Data &amp; backflush</h1><p class="lede">Four kinds of quantity, each with a role. The BOM is only tested against evidence it did not generate.</p>${up}${readinessPanel()}
+  <div class="grid g4">${[['Purchased','Receipts and invoices','Independent: used for matching','ok'],['Expected','BOM × units built','The hypothesis being tested','acc'],['Posted','ERP goods issues / backflush','Often derived from the BOM: checked first','warn'],['Observed','Physical counts','Independent: used for variances','ok']].map(([a,b,c,s]) => `<div class="card stripe ${s}"><h3>${a}</h3><div>${b}</div><div class="muted">${c}</div></div>`).join('')}</div>
+  <div class="card scroll" style="margin-top:14px"><h2>Circularity detector: ${D.kpis.backflushed} of ${D.kpis.assessed} SKUs post BOM-derived consumption</h2>
+  <div class="formula">circular if corr(posted, α × expected) ≥ ${D.config.backflush_corr} and CV(posted ÷ expected) ≤ ${D.config.backflush_cv}</div>
+  <table style="margin-top:10px"><thead><tr><th>SKU</th><th>Part</th><th class="r">Correlation</th><th class="r">CV of ratio</th><th>Posted consumption is</th></tr></thead><tbody>
+  ${bf.map(b => `<tr><td class="mono">${b.sku}</td><td class="mono">${b.part}</td><td class="r mono">${b.corr.toFixed(4)}</td><td class="r mono">${b.cv.toFixed(4)}</td><td><span class="chip ${b.circular?'c-warn':'c-ok'}">${esc(b.label)}</span></td></tr>`).join('')}
+  </tbody></table></div>
+  ${D.planted.length ? '' : '<!--'}<div class="card scroll" style="margin-top:14px"><h2>Planted cases in this demo dataset</h2><table><thead><tr><th>#</th><th>Case</th><th>Records</th><th>What it tests</th></tr></thead><tbody>
+  ${D.planted.map(p => `<tr><td class="mono">${p.case_no}</td><td>${esc(p.case.replace(/_/g,' ').toLowerCase())}</td><td class="mono">${esc(p.sku)} → ${esc(p.eng_part_id)}</td><td>${esc(p.description)}</td></tr>`).join('')}
+  </tbody></table></div>${D.planted.length ? '' : '-->'}`;
+};
+
+V.method = () => `<h1>Methodology</h1><p class="lede">Plain language first, formulas below. Thresholds were tuned on synthetic company A and frozen for the blind test; real deployments recalibrate them in a pilot.</p>
+  <div class="grid g2">
+  <div class="card"><h2>1. Expected demand</h2><div class="formula">Expected(j, t) = Σᵢ BOM_qty(i, j) × units_built(i, t)</div><p>Every engineering part gets a monthly pattern from the products that use it. Parts shared across products get the combined pattern.</p></div>
+  <div class="card"><h2>2. Name signal</h2><div class="formula">name = 0.75 × TF-IDF cosine (character 2–4-grams)
+     + 0.25 × spec-number overlap (Jaccard)</div><p>Descriptions are cleaned and abbreviations expanded (HX → hex, BRG → bearing) before comparison.</p></div>
+  <div class="card"><h2>3. Behavior signal</h2><div class="formula">P̃, Ẽ = rolling 3-month totals of Purchased, Expected
+shape = max(0, ½·corr(P̃, Ẽ) + ½·corr(ΔP̃, ΔẼ))
+behavior = shape² × volume plausibility
+null if &lt; 6 windows, zero variance, or &lt; 3 non-zero windows</div><p>Month-to-month changes work like a fingerprint; levels alone would match anything that grows. Negative correlation is clipped to zero before squaring.</p></div>
+  <div class="card"><h2>4. Volume plausibility against remaining demand</h2><div class="formula">target(s, j) = max(0, 1 − Σ shares of other name-led SKUs on j)
+r = (share + 0.05) ÷ (target + 0.05)
+level = 1 if 0.75 ≤ r ≤ 1.33, else exp(−2.5 × |ln(r ÷ clip)|)</div><p>A 5% backup supplier fits a part that is 95% covered. A SKU claiming demand that another supplier already covers is penalized.</p></div>
+  <div class="card"><h2>5. Decision cascade</h2><div class="formula">1  name ≥ 0.55 and margin ≥ 0.08          → proposed (name-led)
+2  repeat, most certain first: behavior ≥ 0.45
+   and margin ≥ 0.15 (weak name)          → proposed (hidden link)
+3  0.45·name + 0.55·behavior ≥ 0.55       → proposed (combined)
+   otherwise                              → unresolved</div><p>Look-alike twins (raw behavior within 0.05, name ≥ 0.4) are flagged for verification. Only a person moves a link to verified. Rejections are never proposed again.</p></div>
+  <div class="card"><h2>6. Confidence</h2><div class="formula">Wilson: (p + z²/2n ± z·√(p(1−p)/n + z²/4n²)) ÷ (1 + z²/n)
+Stability: block bootstrap over months (B = 300, block = 3)
+Implied usage: NNLS on count intervals, bootstrap 90% CI
+Money: P10–P90 from resampled periods</div></div>
+  <div class="card"><h2>7. Count-to-count balance</h2><div class="formula">Observed use = Counted₀ + Purchased − Counted₁
+ratio = Observed use ÷ Expected
+shift: best mean split, |after − before| ≥ 0.20
+excess: median ≥ 1.04 in ≥ 75% of recent intervals
+inventory build: spike &gt; 3× median, ΔCounted explains ≥ 90%</div></div>
+  <div class="card"><h2>9. Behavior self-check (no answer key needed)</h2><div class="formula">strength = median shape(SKU, part) over links whose name match is clear
+strong ≥ 0.70 · moderate ≥ 0.55 · weak below</div><p>Tells you, on any new dataset, whether purchases follow production closely enough for hidden-link rescue. When weak, RECON relies on names and leaves the rest unresolved.</p></div>
+  <div class="card"><h2>8. Money language</h2><p><b>Spend newly attributed to BOMs</b> is cost that was invisible, not a saving. <b>Price gaps</b> use the lowest observed price as a benchmark. <b>Standardization</b> nets spec-upgrade and qualification costs. Integrity buckets never double-count.</p></div>
+  <div class="card stripe warn" style="grid-column:1/-1"><h2>Limitations</h2><ul>
+    <li>Parts with the same footprint (same products, same quantity per unit) have identical demand patterns. Behavior is evidence of a relationship, not proof of identity.</li>
+    <li>Needs monthly production volumes, receipts and physical counts; about 12 months of history or more. With 6 months the behavior signal switches off.</li>
+    <li>Thresholds were tuned on synthetic data. Calibration bands are wide at these sample sizes. A pilot with a held-back verified crosswalk is required.</li>
+    <li>Variances are investigation leads. Returns, transfers, rework and substitutions must be inside the stock boundary or they surface as unexplained.</li></ul></div>
+  </div>`;
+
+V.roadmap = () => `<h1>Customer value · Track 2 roadmap</h1><p class="lede">Not built. Once part identity is trusted, customer signals can attach to the same components and decide what a platform should standardize and what it should keep different.</p>
+  <div class="grid g3">
+  <div class="card stripe acc"><h3>Link warranty and service records to parts</h3><p>Warranty claims and spare-part consumption already arrive as spend; with verified links they land on specific components and suppliers.</p></div>
+  <div class="card stripe acc"><h3>Attach customer feedback to features</h3><p>Reviews, service notes and returns are tagged to features, then to the components that deliver them.</p></div>
+  <div class="card stripe acc"><h3>Value-versus-cost view</h3><p>Components customers notice and value stay as differentiated modules; the ones they never notice are standardization candidates.</p></div></div>
+  <div class="card" style="margin-top:14px"><h2>How it plugs into the ecosystem</h2><p>Foundation (Track 3) gives each component a trusted identity and true cost. Standardization (Track 1) proposes merges. Customer value (Track 2) checks each merge against what customers care about. The resolution board routes all three to the same owners, and every decision improves the shared part graph.</p></div>`;
+
+/* ---------- presentation (slides from the pitch deck) ---------- */
+let SLIDES = [];
+try { SLIDES = JSON.parse(document.getElementById('slides').textContent); } catch (e) { SLIDES = []; }
+let slideIx = 0;
+V.present = () => {
+  if (!SLIDES.length) return `<h1>Presentation</h1><div class="card"><p>No slides were bundled with this build.</p></div>`;
+  slideIx = Math.max(0, Math.min(slideIx, SLIDES.length - 1));
+  return `<div class="deck" id="deck"><img id="slideimg" src="${SLIDES[slideIx]}" alt="Slide ${slideIx+1} of ${SLIDES.length}">
+    <div class="hit l" onclick="slideGo(-1)" title="Previous"></div><div class="hit r" onclick="slideGo(1)" title="Next"></div></div>
+  <div class="deckbar"><button onclick="slideGo(-1)" aria-label="Previous slide">&larr; Back</button>
+    <span class="count" id="slidecount">${slideIx+1} / ${SLIDES.length}</span>
+    <button class="primary" onclick="slideGo(1)" aria-label="Next slide">Next &rarr;</button>
+    <button onclick="deckFull()">Full screen</button>
+    <a class="btn" href="#overview" style="margin-left:auto">Go to product &rarr;</a></div>
+  <div class="thumbs" id="thumbs">${SLIDES.map((s, i) => `<img src="${s}" class="${i===slideIx?'on':''}" onclick="slideTo(${i})" alt="Slide ${i+1}">`).join('')}</div>
+  <p class="muted" style="font-size:12px;margin-top:8px">Arrow keys, Space or a presentation clicker move between slides. F = full screen, Esc = exit. Click "Go to product" (or any menu item) to start the demo.</p>`;
+};
+function slideTo(i){
+  slideIx = Math.max(0, Math.min(i, SLIDES.length - 1));
+  const img = $('#slideimg'); if (!img) return;
+  img.src = SLIDES[slideIx]; img.alt = `Slide ${slideIx+1} of ${SLIDES.length}`;
+  $('#slidecount').textContent = `${slideIx+1} / ${SLIDES.length}`;
+  document.querySelectorAll('#thumbs img').forEach((t, k) => t.classList.toggle('on', k === slideIx));
+}
+function slideGo(d){ slideTo(slideIx + d); }
+function deckFull(){ const el = $('#deck'); if (!el) return;
+  if (document.fullscreenElement) document.exitFullscreen(); else (el.requestFullscreen || el.webkitRequestFullscreen).call(el); }
+document.addEventListener('keydown', e => {
+  if (location.hash !== '#present' || /INPUT|SELECT|TEXTAREA/.test((e.target.tagName || ''))) return;
+  if (['ArrowRight','PageDown',' ','Enter'].includes(e.key)) { e.preventDefault(); slideGo(1); }
+  else if (['ArrowLeft','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); slideGo(-1); }
+  else if (e.key === 'Home') slideTo(0);
+  else if (e.key === 'End') slideTo(SLIDES.length - 1);
+  else if (e.key === 'f' || e.key === 'F') deckFull();
+});
+
+function render(){
+  const id = (location.hash || '#overview').slice(1); const cur = V[id] ? id : 'overview';
+  $('#navlinks').innerHTML = navHTML(cur);
+  if (!D.planted.length) $('#srcbadge').textContent = 'Uploaded data. The Proof view shows the demo answer-key results.';
+  $('#view').innerHTML = V[cur]();
+}
+window.addEventListener('hashchange', () => { closePassport(); render(); window.scrollTo(0,0); });
+render();
+</script>
+</body>
+</html>
