@@ -1,0 +1,4 @@
+# Paste your Anthropic API key after the = sign, save, then restart start_windows.bat.
+# This file stays on your computer. Never share or upload it.
+ANTHROPIC_API_KEY=paste-your-key-here
+ANTHROPIC_MODEL=claude-sonnet-5-5
